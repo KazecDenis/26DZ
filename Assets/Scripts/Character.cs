@@ -1,12 +1,10 @@
-using System;
-using System.Collections;
 using UnityEngine;
 
 public class Character : MonoBehaviour
 {
-    private const string HorizontalAxisKey = "Horizontal";
     [SerializeField] private Rigidbody2D _rigidbody;
     [SerializeField] private float _moveSpeed;
+    [SerializeField] private float _gravity;
     [SerializeField] private ObstacleChecker _groundChecker;
     [SerializeField] private ObstacleChecker _ceilChecker;
     [SerializeField] private ObstacleChecker _leftWallChecker;
@@ -16,91 +14,54 @@ public class Character : MonoBehaviour
     
     [SerializeField] private float _wallJumpDelay = 0.3f;
     [SerializeField] private float _yVelocity;
-    [SerializeField] private float _gravity;
     private float _wallSlideSpeed = 1.5f;
     private Vector2 _velocity;
-    private bool _jumpPressed;
-    private bool _isWallJumping;
-
     private readonly Quaternion TurnRight = Quaternion.identity;
     private readonly Quaternion TurnLeft = Quaternion.Euler(0, 180, 0);
-
-    public Vector2 Velocity => _rigidbody.velocity;
+    private PlayerInput _playerInput;
+    private CharacterMover _characterMover;
+    private CharacterJumper _characterJumper;
+    private float _horizontalInput;
+    private bool _isJumpPressed;
     public bool IsGrounded => _groundChecker.IsTouches();
+    public Vector2 Velocity => _rigidbody.velocity;
+    private bool IsWallTouches => _leftWallChecker.IsTouches() || _rightWallChecker.IsTouches();
+
+
+
+    private void Awake()
+    {
+        _playerInput = new PlayerInput();
+        _characterMover = new CharacterMover(_moveSpeed, _gravity);
+        _characterJumper = new CharacterJumper(_yVelocity, _wallSlideSpeed, _jumpForceWallX, _jumpForceWallY, _wallJumpDelay, this);
+    }
 
     private void Update()
     {
-        float horizontalInput = Input.GetAxisRaw(HorizontalAxisKey);
+        _horizontalInput = _playerInput.Horizontal;
 
-        _jumpPressed = Input.GetKeyDown(KeyCode.Space);
+        if (_playerInput.JumpPressed)
+            _isJumpPressed = true;
+    }
 
-        if (!_isWallJumping)
-        {
-            float horizontalVelocity = _moveSpeed * horizontalInput;
-
-            _velocity = new Vector2(horizontalVelocity, _velocity.y);
-        }
-            
-
-
-        HandleGravity();
-        HandleSlideWall();
-        HandleJump();
-        JumpOffTheWall();
-        HandleCeil();
+    private void FixedUpdate()
+    {
+        if (!_characterJumper.isWallJumping)
+            _velocity = _characterMover.Move(_velocity, _horizontalInput);
+        
+        _velocity = _characterMover.HandleGravity(_velocity, IsGrounded, Time.fixedDeltaTime);
+        _velocity = _characterJumper.HandleSlideWall(_velocity, IsWallTouches, IsGrounded);
+        _velocity = _characterJumper.HandleJump(_velocity, IsGrounded, _isJumpPressed);
+        _velocity = _characterJumper.JumpOffTheWall(_velocity, _isJumpPressed, IsGrounded, _leftWallChecker.IsTouches(), _rightWallChecker.IsTouches());
+        _velocity = _characterMover.HandleCeil(_velocity, _ceilChecker.IsTouches());
 
         _rigidbody.velocity = _velocity;
 
         transform.rotation = RotationTo(_velocity);
+
+        _isJumpPressed = false;
     }
 
-
-    private void HandleCeil()
-    {
-        if (_ceilChecker.IsTouches())
-            _velocity.y = MathF.Min(0, _velocity.y);
-    }
-    private void HandleGravity()
-    {
-        if (_groundChecker.IsTouches() && _velocity.y <= 0)
-            _velocity.y = 0;
-        else   
-            _velocity.y -= _gravity * Time.deltaTime;
-    }
-            
-    private void HandleJump()
-    {
-        if (_jumpPressed && _groundChecker.IsTouches())
-            _velocity.y = _yVelocity;
-    }
-
-    private void HandleSlideWall()
-    {
-        if (_isWallJumping)
-            return;
-
-        if (IsWallTouches && !IsGrounded && _velocity.y < 0)
-        {
-            _velocity.y = Math.Max(_velocity.y, -_wallSlideSpeed);
-        }
-    }
-
-    private void JumpOffTheWall()
-    {
-        if (!_jumpPressed || IsGrounded || _isWallJumping)
-            return;
-
-        if (_leftWallChecker.IsTouches())
-            _velocity = new Vector2(_jumpForceWallX, _jumpForceWallY);
-        else if (_rightWallChecker.IsTouches())
-            _velocity = new Vector2(- _jumpForceWallX, _jumpForceWallY);
-        else
-            return;
-
-        StartCoroutine(WallJumpProcess());
-    }
-
-    private bool IsWallTouches => _leftWallChecker.IsTouches() || _rightWallChecker.IsTouches();
     private Quaternion RotationTo(Vector2 velocity)
     {
         if (velocity.x >0)
@@ -112,13 +73,6 @@ public class Character : MonoBehaviour
         return transform.rotation;
     }
 
-    private IEnumerator WallJumpProcess()
-    {
-        _isWallJumping = true;
-
-        yield return new WaitForSeconds(_wallJumpDelay);
-
-        _isWallJumping = false;
-    }
+   
 }
 

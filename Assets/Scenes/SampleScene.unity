@@ -5699,6 +5699,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _rigidbody: {fileID: 1528853783}
   _moveSpeed: 9
+  _gravity: 80
   _groundChecker: {fileID: 2047849846}
   _ceilChecker: {fileID: 1220342547}
   _leftWallChecker: {fileID: 1883278133}
@@ -5707,7 +5708,6 @@ MonoBehaviour:
   _jumpForceWallY: 25
   _wallJumpDelay: 0.3
   _yVelocity: 25
-  _gravity: 80
 --- !u!1 &1883278131
 GameObject:
   m_ObjectHideFlags: 0

@@ -5,9 +5,10 @@ public class CharacterMover
     private readonly float _moveSpeed;
     private readonly float _gravity;
 
-    public CharacterMover (float moveSpeed)
+    public CharacterMover (float moveSpeed, float gravity)
     {
         _moveSpeed = moveSpeed;
+        _gravity = gravity;
     }
 
     public Vector2 Move(Vector2 velocity, float horizontalInput)
@@ -17,7 +18,7 @@ public class CharacterMover
         return velocity;
     }
 
-    public Vector2 ApplyGravity(Vector2 velocity, bool isGrounded, float deltaTime)
+    public Vector2 HandleGravity(Vector2 velocity, bool isGrounded, float deltaTime)
     {
         if (isGrounded && velocity.y <= 0)
             velocity.y = 0;
