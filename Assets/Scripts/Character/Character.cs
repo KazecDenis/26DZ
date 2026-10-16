@@ -1,4 +1,6 @@
+using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class Character : MonoBehaviour
 {
@@ -11,9 +13,13 @@ public class Character : MonoBehaviour
     [SerializeField] private ObstacleChecker _rightWallChecker;
     [SerializeField] private float _jumpForceWallX;
     [SerializeField] private float _jumpForceWallY;
-    
     [SerializeField] private float _wallJumpDelay = 0.3f;
     [SerializeField] private float _yVelocity;
+    [SerializeField] private Collider2D _collider;
+    [SerializeField] private float _deadJumpForce;
+    [SerializeField] private float _deadGravity;
+    [SerializeField] private float _restartDelay;
+    private bool _isDead;
     private float _wallSlideSpeed = 1.5f;
     private Vector2 _velocity;
     private readonly Quaternion TurnRight = Quaternion.identity;
@@ -23,9 +29,9 @@ public class Character : MonoBehaviour
     private CharacterJumper _characterJumper;
     private float _horizontalInput;
     private bool _isJumpPressed;
+    private bool IsWallTouches => _leftWallChecker.IsTouches() || _rightWallChecker.IsTouches();
     public bool IsGrounded => _groundChecker.IsTouches();
     public Vector2 Velocity => _rigidbody.velocity;
-    private bool IsWallTouches => _leftWallChecker.IsTouches() || _rightWallChecker.IsTouches();
 
 
 
@@ -38,6 +44,9 @@ public class Character : MonoBehaviour
 
     private void Update()
     {
+        if (_isDead)
+            return;
+
         _horizontalInput = _playerInput.Horizontal;
 
         if (_playerInput.JumpPressed)
@@ -46,6 +55,9 @@ public class Character : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (_isDead)
+            return;
+
         if (!_characterJumper.isWallJumping)
             _velocity = _characterMover.Move(_velocity, _horizontalInput);
         
@@ -73,6 +85,38 @@ public class Character : MonoBehaviour
         return transform.rotation;
     }
 
-   
+    public void Die()
+    {
+        if (_isDead)
+            return;
+
+        _isDead = true;
+
+        _collider.enabled = false;
+
+        _rigidbody.velocity = Vector2.zero;
+        
+        _rigidbody.gravityScale = _deadGravity;
+
+        _rigidbody.AddForce(Vector2.up * _deadJumpForce, ForceMode2D.Impulse);
+
+        StartCoroutine(RestartProcess());
+
+    }
+    public void DieFromFall()
+    {
+        if (_isDead)
+            return;
+
+        StartCoroutine(RestartProcess());
+    }
+    private IEnumerator RestartProcess()
+    {
+        yield return new WaitForSeconds(_restartDelay);
+
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
 }
+
+   
 
